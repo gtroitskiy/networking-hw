@@ -25,14 +25,14 @@ public class NioTest {
   public void byteBufferTest() {
     ByteBuffer buffer = ByteBuffer.allocate(10);
     IntStream.range(0, 5).forEach(i -> buffer.put((byte) i));
-    // TODO: 1 line removed
+    buffer.flip();
     assertEquals(buffer.get(), 0);
     assertEquals(buffer.get(), 1);
     assertEquals(buffer.get(), 2);
     // TODO: 1 line removed
     assertEquals(buffer.get(), 3);
     assertEquals(buffer.get(), 4);
-    // TODO: 1 line removed
+    buffer.position(3);
     assertEquals(buffer.get(), 3);
   }
 
@@ -69,7 +69,7 @@ public class NioTest {
             it.remove();
 
             if (key.isAcceptable()) {
-              // TODO: 1 line removed
+              acceptedRequests.incrementAndGet();
               ServerSocketChannel sscAccept = (ServerSocketChannel) key.channel();
               SocketChannel scAccept = sscAccept.accept();
               scAccept.configureBlocking(false);
@@ -79,8 +79,30 @@ public class NioTest {
               SocketChannel sc = (SocketChannel) key.channel();
               sc.configureBlocking(false);
 
-              // TODO: implement reading donate value, adding it the totalAmount
-              // and writing "ok" response to the client
+              while (true) {
+                try {
+                  echoBuffer.clear();
+                  int r = sc.read(echoBuffer);
+                  if (r <= 0) {
+                    if (r < 0) {
+                      sc.close();
+                    }
+                    break;
+                  }
+
+                  echoBuffer.flip();
+                  totalAmount.addAndGet(echoBuffer.getInt());
+
+                  echoBuffer.clear();
+                  echoBuffer.put("ok".getBytes());
+                  echoBuffer.flip();
+                  sc.write(echoBuffer);
+                } catch (IOException e) {
+                  System.out.println("closing broken channel: " + sc + ", error: " + e.getMessage());
+                  sc.close();
+                  break;
+                }
+              }
             }
           }
         }

@@ -60,21 +60,26 @@ public class AsyncIoTest {
               System.out.println("Thread " + Thread.currentThread().getName() + " read " + bytes + " from " + socketChannel);
 
               // TODO: get task id from incoming data and set it to the following variable
-              int taskId = -12345; // TODO: should be fixed
+              buffer.flip();
+              int taskId = buffer.getInt();
 
               String prefix = "Thread " + Thread.currentThread().getName();
               System.out.println(prefix + " is processing task " + taskId + " for " + SINGLE_TASK_DURATION + " millis");
 
               // TODO: mimic some business
               // and increment success requests counter
+              Thread.sleep(SINGLE_TASK_DURATION);
+              successRequests.incrementAndGet();
 
               System.out.println(prefix + " finished task " + taskId);
-            } catch (IOException e) { // TODO: line can be modified
+            } catch (IOException | InterruptedException e) {
               e.printStackTrace();
             }
             CompletionHandler<Integer, ByteBuffer> readCompletionHandler = this;
             // TODO: implement writing some data to client,
             //  since it's waiting for it at line 122 in order to count down the latch
+            buffer.flip();
+            socketChannel.write(buffer, buffer, readCompletionHandler);
           }
 
           @Override
@@ -121,7 +126,7 @@ public class AsyncIoTest {
               } else {
                 attachment.clear();
                 // TODO: modify following line
-                client.read(attachment, attachment, new CompletionHandler<Integer, ByteBuffer>() {
+                client.read(clientBuffer, 3, TimeUnit.SECONDS, clientBuffer,  new CompletionHandler<Integer, ByteBuffer>() {
                   @Override
                   public void completed(Integer result, ByteBuffer attachment) {
                     successLatch.countDown();
